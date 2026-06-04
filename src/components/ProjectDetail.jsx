@@ -181,7 +181,10 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
           uploading={uploading > 0}
           emptyText="No site photos yet. Add a few wide-angle shots of the property."
           accept="image/*"
-          capture="environment"
+          /* No `capture` here — iOS only offers the camera if `capture` is set.
+             Without it Randy gets the native sheet with Photo Library + Take Photo
+             + Choose Files, which matches how he actually shoots (often photos he
+             took earlier in the visit, not live in the moment). */
           multiple
         />
       </section>
