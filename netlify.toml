@@ -1,7 +1,18 @@
 [build]
   command = "npm run build"
   publish = "dist"
+  functions = "netlify/functions"
 
+# /api/* goes to Netlify Functions. Listed BEFORE the SPA catch-all so it wins.
+# Each function also declares its own `export const config = { path: '/api/...' }`
+# so Netlify v2 functions resolve automatically — this redirect is a safety net
+# for older runtimes and clean local-dev behavior.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# SPA fallback: everything else served by index.html.
 [[redirects]]
   from = "/*"
   to = "/index.html"

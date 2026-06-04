@@ -1,62 +1,70 @@
 import { useState } from 'react'
 import accelLogo from './assets/accel-logo.png'
 import Header from './components/Header'
-import StepNav from './components/StepNav'
-import ApiKeyModal from './components/ApiKeyModal'
-import PhotoUploader from './components/PhotoUploader'
-import TopoUploader from './components/TopoUploader'
-import Preferences from './components/Preferences'
-import GenerateView from './components/GenerateView'
+import ProjectsList from './components/ProjectsList'
+import ProjectDetail from './components/ProjectDetail.jsx'
+import { AuthProvider, useAuth } from './auth/AuthProvider.jsx'
+import LoginScreen from './auth/LoginScreen.jsx'
 
 export default function App() {
-  const [step, setStep] = useState(0)
-  const [showKeys, setShowKeys] = useState(false)
-  const [photos, setPhotos] = useState([])
-  const [topoMap, setTopoMap] = useState(null)
-  const [prefs, setPrefs] = useState({
-    style: '',
-    features: [],
-    budget: '',
-    materials: [],
-    lighting: '',
-    notes: '',
-  })
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
+  )
+}
+
+function Gate() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="app boot-loading">
+        <div className="spinner" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <LoginScreen />
+  }
+
+  return <AuthenticatedApp />
+}
+
+/**
+ * After login, the app is a simple state machine:
+ *   view = 'list'    → ProjectsList (home screen)
+ *   view = 'project' → ProjectDetail (single project)  — built in task #7
+ *
+ * We use plain state rather than react-router because v1 is single-device
+ * (Randy's iPad) and we don't need shareable URLs yet. If we want bookmarkable
+ * project URLs later, we layer in routing without changing data flow.
+ */
+function AuthenticatedApp() {
+  const [view, setView] = useState('list')
+  const [currentProject, setCurrentProject] = useState(null)
+
+  function openProject(project) {
+    setCurrentProject(project)
+    setView('project')
+  }
+
+  function backToList() {
+    setCurrentProject(null)
+    setView('list')
+  }
 
   return (
     <div className="app">
-      <Header onSettingsClick={() => setShowKeys(true)} />
-      <StepNav currentStep={step} onStepClick={setStep} />
+      <Header />
 
       <main className="main-content">
-        {step === 0 && (
-          <PhotoUploader
-            photos={photos}
-            setPhotos={setPhotos}
-            onNext={() => setStep(1)}
-          />
-        )}
-        {step === 1 && (
-          <TopoUploader
-            topoMap={topoMap}
-            setTopoMap={setTopoMap}
-            onNext={() => setStep(2)}
-            onBack={() => setStep(0)}
-          />
-        )}
-        {step === 2 && (
-          <Preferences
-            prefs={prefs}
-            setPrefs={setPrefs}
-            onNext={() => setStep(3)}
-            onBack={() => setStep(1)}
-          />
-        )}
-        {step === 3 && (
-          <GenerateView
-            photos={photos}
-            topoMap={topoMap}
-            prefs={prefs}
-            onBack={() => setStep(2)}
+        {view === 'list' && <ProjectsList onOpenProject={openProject} />}
+        {view === 'project' && currentProject && (
+          <ProjectDetail
+            project={currentProject}
+            onBack={backToList}
           />
         )}
       </main>
@@ -67,8 +75,7 @@ export default function App() {
           <img src={accelLogo} alt="Accel Media" className="accel-logo" />
         </a>
       </footer>
-
-      <ApiKeyModal open={showKeys} onClose={() => setShowKeys(false)} />
     </div>
   )
 }
+

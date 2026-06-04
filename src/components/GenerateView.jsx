@@ -19,11 +19,9 @@ export default function GenerateView({ photos, topoMap, prefs, onBack }) {
   const [briefDraft, setBriefDraft] = useState('')
   const [generatingAngle, setGeneratingAngle] = useState(null) // which photo index
 
-  // Check if API keys are configured
-  const hasKeys = !!(
-    (import.meta.env.VITE_ANTHROPIC_API_KEY || localStorage.getItem('cc_anthropic_key')) &&
-    (import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('cc_gemini_key'))
-  )
+  // API keys are now server-side (Netlify Functions). The proxy will fail
+  // with a clear error message if anything is misconfigured, so we don't
+  // need a client-side pre-check.
 
   async function handleGenerate(angleIndex = 0) {
     setLoading(true)
@@ -108,12 +106,6 @@ export default function GenerateView({ photos, topoMap, prefs, onBack }) {
   return (
     <div className="step-content">
       <h2 className="step-title">Generate Design Concepts</h2>
-
-      {!hasKeys && (
-        <div className="alert alert-warn">
-          API keys not configured. Tap the settings icon in the header to enter your Anthropic and Gemini API keys.
-        </div>
-      )}
 
       {/* Project Summary */}
       <div className="summary-card">
@@ -202,7 +194,7 @@ export default function GenerateView({ photos, topoMap, prefs, onBack }) {
           <button
             className="btn btn-primary btn-large"
             onClick={() => handleGenerate(0)}
-            disabled={loading || !hasKeys}
+            disabled={loading}
           >
             {loading ? 'Generating…' : 'Generate Design'}
           </button>

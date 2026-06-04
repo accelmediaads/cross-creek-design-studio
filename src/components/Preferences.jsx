@@ -52,7 +52,14 @@ const LIGHTING = [
   'Overcast/Soft Light',
 ]
 
-export default function Preferences({ prefs, setPrefs, onNext, onBack }) {
+/**
+ * Preferences form. Two usage modes:
+ *
+ *   Wizard mode (legacy): pass onNext + onBack, get Back / Next: Generate buttons.
+ *   Inline mode (project detail): pass `inline` and omit nav callbacks. Form
+ *     fields render without any nav chrome; the parent controls when to save.
+ */
+export default function Preferences({ prefs, setPrefs, onNext, onBack, inline = false, title }) {
   function toggleMulti(key, value) {
     setPrefs(prev => {
       const arr = prev[key] || []
@@ -70,9 +77,9 @@ export default function Preferences({ prefs, setPrefs, onNext, onBack }) {
   const canProceed = prefs.style && (prefs.features || []).length >= 1
 
   return (
-    <div className="step-content">
-      <h2 className="step-title">Client Preferences</h2>
-      <p className="step-desc">Walk through these with the homeowner.</p>
+    <div className={inline ? 'pref-form' : 'step-content'}>
+      {!inline && <h2 className="step-title">{title || 'Client Preferences'}</h2>}
+      {!inline && <p className="step-desc">Walk through these with the homeowner.</p>}
 
       <section className="pref-section">
         <h3 className="pref-heading">Design Style</h3>
@@ -130,12 +137,14 @@ export default function Preferences({ prefs, setPrefs, onNext, onBack }) {
         />
       </section>
 
-      <div className="step-actions">
-        <button className="btn btn-secondary" onClick={onBack}>Back</button>
-        <button className="btn btn-primary" disabled={!canProceed} onClick={onNext}>
-          Next: Generate
-        </button>
-      </div>
+      {!inline && (
+        <div className="step-actions">
+          <button className="btn btn-secondary" onClick={onBack}>Back</button>
+          <button className="btn btn-primary" disabled={!canProceed} onClick={onNext}>
+            Next: Generate
+          </button>
+        </div>
+      )}
     </div>
   )
 }
