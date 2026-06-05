@@ -127,10 +127,13 @@ export default function Preferences({ prefs, setPrefs, onNext, onBack, inline = 
       </section>
 
       <section className="pref-section">
-        <h3 className="pref-heading">Additional Notes</h3>
+        <h3 className="pref-heading">
+          Style notes for the AI
+          <span className="pref-hint"> (steers the design — not your visit notes)</span>
+        </h3>
         <textarea
           className="field-textarea"
-          placeholder="e.g. '3 kids under 10, need safe pool area' or 'Low maintenance plantings' or 'Entertaining space for 20+ people' or 'Want privacy from neighbors'"
+          placeholder="Constraints the design model should respect. e.g. '3 kids under 10, need safe pool area' or 'Low maintenance plantings' or 'Want privacy from neighbors'. For client conversation notes, use the Notes section at the top of the project."
           value={prefs.notes || ''}
           onChange={e => setSingle('notes', e.target.value)}
           rows={3}

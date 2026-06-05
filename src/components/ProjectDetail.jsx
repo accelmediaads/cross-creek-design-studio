@@ -171,7 +171,29 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         <ProjectHeader project={project} onSave={saveHeaderField} />
       </section>
 
-      {/* ---- 2. Site Photos ---- */}
+      {/* ---- 2. Notes ----
+        Notes sits HIGH on the page — right after the header — because Randy
+        flagged that the Notes box "wasn't working." Diagnosis: it worked fine,
+        but was buried at the bottom of the page below 5 generations, and he
+        was using the "Style notes for AI" textarea inside Preferences instead,
+        thinking that was the notes box. Surfacing it here makes it the first
+        thing he sees on a project, which matches how he actually uses it
+        (capturing client conversation on arrival). */}
+      <section className="detail-section">
+        <SectionHeader
+          title="Notes"
+          subtitle="Saved automatically. Use voice dictation on iPad — Wispr Flow, iOS Dictation, anything that types into text fields."
+        />
+        <textarea
+          className="notes-textarea"
+          defaultValue={project.notes || ''}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Site walk observations, client preferences mentioned in conversation, next-step reminders…"
+          rows={6}
+        />
+      </section>
+
+      {/* ---- 3. Site Photos ---- */}
       <section className="detail-section">
         <SectionHeader title="Site Photos" subtitle={`${photos.length} uploaded`} />
         <PhotoGrid
@@ -189,7 +211,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         />
       </section>
 
-      {/* ---- 3. Topo Map ---- */}
+      {/* ---- 4. Topo Map ---- */}
       <section className="detail-section">
         <SectionHeader title="Topo Map" subtitle="Optional — improves AI design accuracy" />
         <PhotoGrid
@@ -203,7 +225,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         />
       </section>
 
-      {/* ---- 4. Preferences ---- */}
+      {/* ---- 5. Preferences ---- */}
       <section className="detail-section">
         <SectionHeader
           title="Design Preferences"
@@ -212,7 +234,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         <Preferences prefs={prefsValue} setPrefs={setPrefs} inline />
       </section>
 
-      {/* ---- 5. Generations gallery ---- */}
+      {/* ---- 6. Generations gallery ---- */}
       <section className="detail-section">
         <SectionHeader
           title="Generations"
@@ -241,21 +263,6 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
             ))}
           </div>
         )}
-      </section>
-
-      {/* ---- 6. Notes ---- */}
-      <section className="detail-section">
-        <SectionHeader
-          title="Notes"
-          subtitle="Saved automatically. Use voice dictation on iPad — Wispr Flow, iOS Dictation, anything that types into text fields."
-        />
-        <textarea
-          className="notes-textarea"
-          defaultValue={project.notes || ''}
-          onChange={e => setNotes(e.target.value)}
-          placeholder="Site walk observations, client preferences mentioned in conversation, next-step reminders…"
-          rows={8}
-        />
       </section>
 
       {error && (
