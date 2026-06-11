@@ -58,8 +58,16 @@ const LIGHTING = [
  *   Wizard mode (legacy): pass onNext + onBack, get Back / Next: Generate buttons.
  *   Inline mode (project detail): pass `inline` and omit nav callbacks. Form
  *     fields render without any nav chrome; the parent controls when to save.
+ *
+ * Note on the "Style notes for the AI" textarea: it's UNCONTROLLED (defaultValue,
+ * not value). Reason: when wired controlled to a debounced-save setter, every
+ * keystroke triggers React's controlled-input reconciliation, which snaps the
+ * DOM back to the last-saved value and eats fast typing and full-utterance
+ * Wispr Flow inserts. Randy hit this — only the last character of each typed
+ * burst made it in. The main Notes section in ProjectDetail uses the same
+ * uncontrolled pattern and works correctly.
  */
-export default function Preferences({ prefs, setPrefs, onNext, onBack, inline = false, title }) {
+export default function Preferences({ prefs, setPrefs, onNext, onBack, inline = false, title, prefsKey }) {
   function toggleMulti(key, value) {
     setPrefs(prev => {
       const arr = prev[key] || []
@@ -132,9 +140,14 @@ export default function Preferences({ prefs, setPrefs, onNext, onBack, inline = 
           <span className="pref-hint"> (steers the design — not your visit notes)</span>
         </h3>
         <textarea
+          /* UNCONTROLLED — see component header comment for why.
+             `key` forces a remount when we move to a different project so
+             the textarea picks up the new project's notes. (defaultValue
+             would otherwise stay stale across project switches.) */
+          key={prefsKey || 'default'}
           className="field-textarea"
           placeholder="Constraints the design model should respect. e.g. '3 kids under 10, need safe pool area' or 'Low maintenance plantings' or 'Want privacy from neighbors'. For client conversation notes, use the Notes section at the top of the project."
-          value={prefs.notes || ''}
+          defaultValue={prefs.notes || ''}
           onChange={e => setSingle('notes', e.target.value)}
           rows={3}
         />

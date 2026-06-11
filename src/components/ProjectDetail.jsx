@@ -231,7 +231,15 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
           title="Design Preferences"
           subtitle="Walk through these with the homeowner. Changes save automatically."
         />
-        <Preferences prefs={prefsValue} setPrefs={setPrefs} inline />
+        <Preferences
+          prefs={prefsValue}
+          setPrefs={setPrefs}
+          inline
+          /* Keying the inner uncontrolled textarea by project id so it
+             remounts (and picks up the new project's notes) when Randy
+             switches between projects. See Preferences.jsx for details. */
+          prefsKey={projectId}
+        />
       </section>
 
       {/* ---- 6. Generations gallery ---- */}
