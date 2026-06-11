@@ -35,6 +35,7 @@ export default function ProjectGenerator({
   project,
   sitePhotos,         // [{ id, signedUrl, storage_path, ... }]
   topoPhoto,          // single photo row or null
+  sketches = [],      // [{ id, signedUrl, storage_path, ... }] — hand-drawn concept refs
   onBack,             // called when Randy is done — parent refreshes the gallery
 }) {
   // Local state for this generation session. These results are also persisted
@@ -65,20 +66,26 @@ export default function ProjectGenerator({
     if (!canGenerate || loading) return
     setLoading(true)
     setError(null)
-    setBusyMsg('Loading photo…')
+    setBusyMsg('Loading photos…')
 
     try {
-      // 1. Pull the source photo from Storage as a data URI (Gemini wants inline base64).
+      // 1. Pull the source photo + topo + all sketches from Storage as data URIs.
+      // Order matters: site photo first (Image 1), topo second (Image 2 if present),
+      // sketches last. The Claude prompt explains each role.
       const photoUri = await downloadAsDataUri('project-photos', sourcePhoto.storage_path)
       const topoUri = topoPhoto
         ? await downloadAsDataUri('project-photos', topoPhoto.storage_path)
         : null
+      const sketchUris = await Promise.all(
+        sketches.map(s => downloadAsDataUri('project-photos', s.storage_path))
+      )
 
       // 2. Ask Claude for an optimized prompt.
       setBusyMsg('Writing prompt…')
       const prompt = await generateDesignPrompt({
         photoCount,
         hasTopoMap: hasTopo,
+        sketchCount: sketches.length,
         style: prefs.style,
         features: prefs.features,
         budget: prefs.budget || 'Not specified',
@@ -91,9 +98,10 @@ export default function ProjectGenerator({
         angleIndex: results.filter(r => r.generation.kind !== 'revision').length,
       })
 
-      // 3. Ask Gemini for the image.
+      // 3. Ask Gemini for the image. Site photo + sketches all flow as
+      //    "photoDataUris"; topo stays as the dedicated topo arg.
       setBusyMsg('Generating design (15–30s)…')
-      const result = await generateDesignImage(prompt, [photoUri], topoUri)
+      const result = await generateDesignImage(prompt, [photoUri, ...sketchUris], topoUri)
 
       // 4. Persist: upload image + insert row.
       setBusyMsg('Saving…')
@@ -212,7 +220,13 @@ export default function ProjectGenerator({
 
       {/* Prefs summary — read-only here, edited on the project detail page */}
       <section className="detail-section">
-        <SummaryGrid project={project} prefs={prefs} photoCount={photoCount} hasTopo={hasTopo} />
+        <SummaryGrid
+          project={project}
+          prefs={prefs}
+          photoCount={photoCount}
+          hasTopo={hasTopo}
+          sketchCount={sketches.length}
+        />
       </section>
 
       {/* Big generate CTA */}
@@ -340,7 +354,7 @@ export default function ProjectGenerator({
   )
 }
 
-function SummaryGrid({ project, prefs, photoCount, hasTopo }) {
+function SummaryGrid({ project, prefs, photoCount, hasTopo, sketchCount }) {
   const rows = [
     { label: 'Project', value: project.name },
     prefs.style && { label: 'Style', value: prefs.style },
@@ -351,6 +365,7 @@ function SummaryGrid({ project, prefs, photoCount, hasTopo }) {
     prefs.notes && { label: 'Notes', value: prefs.notes },
     { label: 'Site photos', value: `${photoCount} uploaded` },
     { label: 'Topo map', value: hasTopo ? 'Included' : 'Not included' },
+    sketchCount > 0 && { label: 'Reference sketches', value: `${sketchCount} included` },
   ].filter(Boolean)
 
   return (

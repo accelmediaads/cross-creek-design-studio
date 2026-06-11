@@ -9,6 +9,24 @@ import { getAccessToken } from './supabase.js'
 
 const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'
 
+/**
+ * Build a small bullet roster describing each image attached to the prompt,
+ * in the same order Gemini receives them. Helps Claude write prompts that
+ * call out each reference correctly.
+ */
+function buildImageRoster({ photoCount, hasTopoMap, sketchCount }) {
+  const lines = ['Image roster (in this order):']
+  let idx = 1
+  lines.push(`- Image ${idx++}: ACTUAL SITE PHOTOGRAPH — the real property. Preserve house, terrain, sky, camera angle exactly. Only the landscape/hardscape gets redesigned.`)
+  if (hasTopoMap) {
+    lines.push(`- Image ${idx++}: TOPOGRAPHY MAP — use only as a reference for grade and layout. Do NOT render it into the final image.`)
+  }
+  for (let i = 0; i < sketchCount; i++) {
+    lines.push(`- Image ${idx++}: REFERENCE SKETCH ${i + 1} — hand-drawn concept showing the desired layout/features. Use as DESIGN INSPIRATION only; the output must be photoreal, not stylized like the sketch.`)
+  }
+  return lines.join('\n')
+}
+
 async function callClaude(body) {
   const token = await getAccessToken()
   if (!token) throw new Error('Not signed in')
@@ -36,6 +54,7 @@ async function callClaude(body) {
 export async function generateDesignPrompt({
   photoCount,
   hasTopoMap,
+  sketchCount = 0,  // hand-drawn concept references (treat as inspiration, NOT literal style)
   style,
   features,
   budget,
@@ -45,17 +64,36 @@ export async function generateDesignPrompt({
   designBrief,  // for multi-angle consistency
   angleIndex,   // which angle we're generating (0-based)
 }) {
+  // Build the image-roster description so the model knows what each attached
+  // image represents. Order matches what we send to Gemini:
+  //   Image 1 = the actual site photograph (preserve property exactly)
+  //   Image 2..N = optional topo map and/or reference sketches.
+  const imageRoster = buildImageRoster({ photoCount: 1, hasTopoMap, sketchCount })
+
   let userMessage = `The attached photo(s) show a REAL property in North Idaho. The AI model will receive these photos as reference. Your prompt MUST instruct the model to keep the exact same house, camera angle, and scene orientation — only redesigning the landscape/hardscape/outdoor living areas.
 
+${imageRoster}
+
 Project Details:
-- Number of site photos attached: ${photoCount}
 - Topography map included: ${hasTopoMap ? 'Yes' : 'No'}
+- Reference sketches included: ${sketchCount > 0 ? `Yes (${sketchCount})` : 'No'}
 - Design style: ${style}
 - Features requested: ${features.join(', ')}
 - Investment range: ${budget}
 - Materials: ${materials.join(', ')}${(materials || []).some(m => m.toLowerCase().includes('paver')) ? ' (IMPORTANT: Cross Creek exclusively uses Belgard pavers — specify Belgard by name)' : ''}
 - Time of day / lighting: ${lighting}
 ${notes ? `- Client notes: ${notes}` : ''}`
+
+  if (sketchCount > 0) {
+    userMessage += `
+
+CRITICAL — Reference sketches:
+The reference sketch(es) are HAND-DRAWN concept images showing what the designer envisions. Your prompt MUST instruct the model to:
+- Use the sketches ONLY as design inspiration (layout, features, vibe, placement)
+- NOT to mimic the cartoonish / hand-drawn quality of the sketches
+- The OUTPUT must be photorealistic, matching the real property in Image 1
+- Translate the sketch's design ideas into real materials, real plantings, and real outdoor structures appropriate for the property and the client's chosen style/materials`
+  }
 
   if (designBrief && angleIndex > 0) {
     userMessage += `

@@ -25,8 +25,9 @@ import ProjectGenerator from './ProjectGenerator.jsx'
 
 export default function ProjectDetail({ project: initialProject, onBack }) {
   const [project, setProject] = useState(initialProject)
-  const [photos, setPhotos] = useState([])
+  const [photos, setPhotos] = useState([])         // kind === 'site_photo'
   const [topoPhotos, setTopoPhotos] = useState([]) // kind === 'topo_map'
+  const [sketches, setSketches] = useState([])     // kind === 'sketch' (concept references)
   const [generations, setGenerations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -46,6 +47,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
       setProject(fresh)
       setPhotos(allPhotos.filter(p => p.kind === 'site_photo'))
       setTopoPhotos(allPhotos.filter(p => p.kind === 'topo_map'))
+      setSketches(allPhotos.filter(p => p.kind === 'sketch'))
       setGenerations(gens)
     } catch (err) {
       setError(err.message || 'Failed to load project')
@@ -86,6 +88,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
       const all = await listProjectPhotos(projectId)
       setPhotos(all.filter(p => p.kind === 'site_photo'))
       setTopoPhotos(all.filter(p => p.kind === 'topo_map'))
+      setSketches(all.filter(p => p.kind === 'sketch'))
     } catch (err) {
       setError(err.message || 'Upload failed')
     } finally {
@@ -99,6 +102,8 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
       await deleteProjectPhoto(photo)
       if (photo.kind === 'topo_map') {
         setTopoPhotos(prev => prev.filter(p => p.id !== photo.id))
+      } else if (photo.kind === 'sketch') {
+        setSketches(prev => prev.filter(p => p.id !== photo.id))
       } else {
         setPhotos(prev => prev.filter(p => p.id !== photo.id))
       }
@@ -142,6 +147,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         project={project}
         sitePhotos={photos}
         topoPhoto={topoPhotos[0] || null}
+        sketches={sketches}
         onBack={() => {
           setShowGenerate(false)
           // Refresh so the project gallery picks up any new generations.
@@ -225,7 +231,29 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         />
       </section>
 
-      {/* ---- 5. Preferences ---- */}
+      {/* ---- 5. Reference Sketches ----
+        Randy can sketch his envisioned design in the iPad Notes app and
+        screenshot it. Uploaded here, sketches accompany the source site
+        photo into every generation. Claude is instructed to treat them
+        as design INSPIRATION (layout, features, vibe) rather than literal
+        style — so the final image stays photoreal. */}
+      <section className="detail-section">
+        <SectionHeader
+          title="Reference Sketches"
+          subtitle="Optional — hand-drawn or rough concept images that show what you're envisioning. The AI will use these as design inspiration alongside the site photo."
+        />
+        <PhotoGrid
+          photos={sketches}
+          onAdd={files => handlePhotoUpload(files, 'sketch')}
+          onDelete={handlePhotoDelete}
+          uploading={uploading > 0}
+          emptyText="No sketches yet. Take a screenshot of your iPad Notes sketch and add it here."
+          accept="image/*"
+          multiple
+        />
+      </section>
+
+      {/* ---- 6. Preferences ---- */}
       <section className="detail-section">
         <SectionHeader
           title="Design Preferences"
@@ -242,7 +270,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         />
       </section>
 
-      {/* ---- 6. Generations gallery ---- */}
+      {/* ---- 7. Generations gallery ---- */}
       <section className="detail-section">
         <SectionHeader
           title="Generations"
