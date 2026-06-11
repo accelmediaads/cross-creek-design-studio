@@ -179,6 +179,23 @@ body {
   justify-content: center;
   background: var(--green);
 }
+.login-mode-switch {
+  margin-top: 16px;
+  text-align: center;
+}
+.login-switch-link {
+  background: none;
+  border: none;
+  color: var(--sage);
+  opacity: 0.8;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  padding: 8px;
+}
+.login-switch-link:active {
+  opacity: 1;
+}
 
 /* ---- Step Nav ---- */
 

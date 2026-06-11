@@ -48,11 +48,31 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  /**
+   * Self-serve signup. Goes through our server-side /api/signup function
+   * so we can gate on the signup code (kept as a Netlify env var, never in
+   * the browser bundle). On success, immediately signs the new user in.
+   */
+  async function signUp(email, password, signupCode) {
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password, signupCode }),
+    })
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.error || `Signup failed: ${response.status}`)
+    }
+    // Account created (auto-confirmed server-side). Now sign them in.
+    return signIn(email, password)
+  }
+
   const value = {
     session,
     user: session?.user ?? null,
     loading,
     signIn,
+    signUp,
     signOut,
   }
 
