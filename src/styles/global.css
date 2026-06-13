@@ -1689,3 +1689,25 @@ body {
   cursor: pointer;
   flex-shrink: 0;
 }
+
+/* ---- Danger zone (delete project) ---- */
+.danger-zone {
+  border-color: rgba(196, 68, 68, 0.4);
+  background: rgba(196, 68, 68, 0.05);
+}
+.btn-danger {
+  background: var(--error);
+  border: 1px solid var(--error);
+  color: var(--cream);
+  padding: 12px 22px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  cursor: pointer;
+}
+.btn-danger:active:not(:disabled) {
+  filter: brightness(0.85);
+}
+.btn-danger:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

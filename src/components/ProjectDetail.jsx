@@ -13,7 +13,7 @@
 // (he'll close the iPad mid-conversation; we need it saved).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getProject, updateProject } from '../api/projects.js'
+import { getProject, updateProject, deleteProject } from '../api/projects.js'
 import {
   listProjectPhotos,
   uploadProjectPhoto,
@@ -27,6 +27,7 @@ import PencilMarkup from './PencilMarkup.jsx'
 import { generatePencilRevisionPrompt } from '../api/claude.js'
 import { reviseDesignImage } from '../api/gemini.js'
 import { saveGeneration } from '../api/generations.js'
+import { supabase } from '../api/supabase.js'
 
 export default function ProjectDetail({ project: initialProject, onBack }) {
   const [project, setProject] = useState(initialProject)
@@ -40,6 +41,7 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
   const [viewerIndex, setViewerIndex] = useState(null) // null = closed; otherwise index into generations
   const [markupGen, setMarkupGen] = useState(null)      // generation being marked up with Pencil
   const [markupBusy, setMarkupBusy] = useState(false)
+  const [deleteBusy, setDeleteBusy] = useState(false)
 
   const projectId = project.id
 
@@ -117,6 +119,35 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
       }
     } catch (err) {
       setError(err.message || 'Delete failed')
+    }
+  }
+
+  // ---- Delete project (cleans Storage too, then DB cascades) --------------
+
+  async function handleDeleteProject() {
+    const label = project.name || 'this project'
+    if (!confirm(`Delete "${label}"? This removes all photos, generations, and notes for the project. Can't be undone.`)) return
+    setDeleteBusy(true)
+    setError(null)
+    try {
+      // 1. Wipe Storage objects — DB cascade only handles rows, not blobs.
+      const photoPaths = [...photos, ...topoPhotos, ...sketches].map(p => p.storage_path).filter(Boolean)
+      const genPaths = generations.map(g => g.storage_path).filter(Boolean)
+      if (photoPaths.length > 0) {
+        const { error: e1 } = await supabase.storage.from('project-photos').remove(photoPaths)
+        if (e1) console.warn('[delete] photo storage cleanup partial:', e1.message)
+      }
+      if (genPaths.length > 0) {
+        const { error: e2 } = await supabase.storage.from('generations').remove(genPaths)
+        if (e2) console.warn('[delete] generation storage cleanup partial:', e2.message)
+      }
+      // 2. Delete the project row — FK cascade kills project_photos + generations rows.
+      await deleteProject(projectId)
+      // 3. Hand off back to the list.
+      onBack?.()
+    } catch (err) {
+      setError(err.message || 'Failed to delete project')
+      setDeleteBusy(false)
     }
   }
 
@@ -379,6 +410,22 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
           <button className="btn btn-small btn-secondary" onClick={() => setError(null)}>Dismiss</button>
         </div>
       )}
+
+      {/* ---- Danger zone ---- */}
+      <section className="detail-section danger-zone">
+        <SectionHeader
+          title="Danger zone"
+          subtitle="Deleting removes the project, every photo, every generation, and every note. Can't be undone."
+        />
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={handleDeleteProject}
+          disabled={deleteBusy}
+        >
+          {deleteBusy ? 'Deleting…' : 'Delete project'}
+        </button>
+      </section>
     </div>
   )
 }
