@@ -64,12 +64,33 @@ export default function ProjectGenerator({
   // Phase-A state: 3 candidate generations + their dataUris
   const [options, setOptions] = useState([])  // [{ generation, dataUri, label }]
 
+  // Opt-in toggle for the 3-option-with-lock flow. Default OFF: Randy gets
+  // a normal single generation. He flips it on only when he wants to pick
+  // from three. Lives in component state — no DB persistence; it's a per-
+  // session preference, decided right before he taps Generate.
+  const [useOptions, setUseOptions] = useState(false)
+
   const prefs = useMemo(() => normalizePrefs(project.prefs), [project.prefs])
   const photoCount = sitePhotos.length
   const hasTopo = !!topoPhoto
 
   const conceptLocked = !!project.selected_generation_id
-  const phaseAEligible = !conceptLocked && photoCount > 0 && !!prefs.style && options.length === 0
+  // The 3-option phase is only available when this is a fresh project AND
+  // Randy has explicitly opted in via the toggle.
+  const phaseAEligible =
+    !conceptLocked &&
+    photoCount > 0 &&
+    !!prefs.style &&
+    options.length === 0 &&
+    useOptions
+  // The toggle itself is only visible at the very start (no prior gens, not
+  // locked, has photos + style) — past that point the question is moot.
+  const optionsToggleVisible =
+    !conceptLocked &&
+    options.length === 0 &&
+    results.length === 0 &&
+    photoCount > 0 &&
+    !!prefs.style
 
   // ----------------------------------------------------------------------------
   // PHASE A — Generate three options
@@ -420,7 +441,7 @@ export default function ProjectGenerator({
         />
       </section>
 
-      {/* ---- PHASE A: Start ---- */}
+      {/* ---- PHASE A: Start (only when toggle is on) ---- */}
       {renderPhase === 'options-start' && (
         <div className="generate-cta-row">
           <button
@@ -435,6 +456,14 @@ export default function ProjectGenerator({
             layout-forward, softscape-forward, hardscape-forward. Pick the one
             the client likes best and it locks in the look for every other angle.
           </p>
+          <label className="options-toggle" style={{ marginTop: 6 }}>
+            <input
+              type="checkbox"
+              checked={useOptions}
+              onChange={e => setUseOptions(e.target.checked)}
+            />
+            <span>Generate 3 options to compare (≈3× the AI cost)</span>
+          </label>
         </div>
       )}
 
@@ -488,6 +517,19 @@ export default function ProjectGenerator({
             >
               Generate every remaining angle
             </button>
+          )}
+          {/* Opt-in: 3-option flow. Only shown on a truly fresh project so
+              Randy can pick "compare 3 vs just one" right before he taps
+              Generate. Disappears as soon as he has results. */}
+          {optionsToggleVisible && (
+            <label className="options-toggle">
+              <input
+                type="checkbox"
+                checked={useOptions}
+                onChange={e => setUseOptions(e.target.checked)}
+              />
+              <span>Generate 3 options to compare (≈3× the AI cost) — pick your favorite to lock the look</span>
+            </label>
           )}
           {!sourcePhoto && <p className="muted small">Add at least one site photo.</p>}
           {!prefs.style && <p className="muted small">Pick a Design Style in the project preferences.</p>}

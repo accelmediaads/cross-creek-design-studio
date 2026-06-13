@@ -1667,3 +1667,25 @@ body {
   border-radius: var(--radius-sm);
   display: block;
 }
+
+.options-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--green);
+  border: 1px solid var(--green-mid);
+  border-radius: var(--radius-sm);
+  color: var(--cream);
+  font-size: 14px;
+  cursor: pointer;
+  max-width: 600px;
+}
+.options-toggle input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--gold);
+  cursor: pointer;
+  flex-shrink: 0;
+}
