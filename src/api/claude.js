@@ -115,6 +115,42 @@ You MUST write a prompt that shows the SAME design from this new camera angle. S
 }
 
 /**
+ * Ask Claude to write a revision prompt for Nano Banana Pro that interprets
+ * Apple Pencil annotations drawn on an existing design.
+ *
+ * The flattened composite (original design + red/cream/black pencil strokes)
+ * is the single image input to Gemini. The prompt must tell Gemini that the
+ * strokes are NOT design elements — they're annotation marking up where
+ * changes are wanted.
+ */
+export async function generatePencilRevisionPrompt(captionText) {
+  const userMessage = `Write a Nano Banana Pro prompt for revising a landscape design image that has been MARKED UP with Apple Pencil annotations.
+
+The annotations are colored pencil strokes (red, cream, or black). They are NOT part of the design — they are HUMAN ANNOTATIONS indicating where and how the design should change. The homeowner's designer drew them in to communicate revisions.
+
+The designer's caption explaining the requested changes:
+"${captionText}"
+
+Write a prompt that instructs the model to:
+- Use the image as the base design
+- IGNORE the pencil annotations as visual elements — do NOT render any pencil strokes in the output
+- INTERPRET the location and shape of the annotations as indicators of WHERE and WHAT changes are wanted
+- Apply the requested changes per the caption above
+- Preserve everything else exactly — same camera angle, same lighting, same style, same materials, same overall layout outside the annotated areas
+- Output must be photorealistic, no people/vehicles/animals
+- Keep under 1500 characters
+
+Output ONLY the prompt text.`
+
+  return callClaude({
+    model: ANTHROPIC_MODEL,
+    max_tokens: 1024,
+    system: CLAUDE_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  })
+}
+
+/**
  * Ask Claude to write a revision prompt for Nano Banana Pro.
  */
 export async function generateRevisionPrompt(revisionText) {
@@ -140,6 +176,88 @@ Output ONLY the prompt text.`
     system: CLAUDE_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   })
+}
+
+/**
+ * Ask Claude to generate THREE prompt variations for the very first generation
+ * on a project. All three hew to the same chosen STYLE, but explore different
+ * interpretations within that style — e.g. one emphasizes layout / spatial
+ * composition, one leans softscape (plant choices), one leans hardscape /
+ * focal-point materials. Goal: three options that feel like real alternatives
+ * the homeowner can pick from, not three random takes.
+ *
+ * Returns: { variations: [string, string, string], labels: [string, string, string] }
+ */
+export async function generateThreeDesignPromptVariations({
+  photoCount,
+  hasTopoMap,
+  sketchCount = 0,
+  style,
+  features,
+  budget,
+  materials,
+  lighting,
+  notes,
+}) {
+  const userMessage = `You are writing THREE distinct Nano Banana Pro prompt variations for the same property's first design generation. The client has already chosen their style and features (below). Your job is to produce three different INTERPRETATIONS within that style — not three different styles.
+
+Project Details:
+- Number of site photos: ${photoCount}
+- Topography map included: ${hasTopoMap ? 'Yes' : 'No'}
+- Reference sketches: ${sketchCount > 0 ? `Yes (${sketchCount})` : 'No'}
+- Design style: ${style}
+- Features requested: ${features.join(', ')}
+- Investment range: ${budget}
+- Materials: ${materials.join(', ')}${(materials || []).some(m => m.toLowerCase().includes('paver')) ? ' (IMPORTANT: Cross Creek exclusively uses Belgard pavers — specify Belgard by name)' : ''}
+- Time of day / lighting: ${lighting}
+${notes ? `- Client notes: ${notes}` : ''}
+
+Image roster (in this order):
+- Image 1: ACTUAL SITE PHOTOGRAPH — the real property. Preserve house, terrain, sky, camera angle exactly. Only the landscape/hardscape gets redesigned.
+${hasTopoMap ? '- Image 2: TOPOGRAPHY MAP — reference for grade and layout only; do NOT render it into the final image.\n' : ''}${sketchCount > 0 ? `- Image ${hasTopoMap ? 3 : 2}+: REFERENCE SKETCHES — hand-drawn concept(s). Use as DESIGN INSPIRATION only; output must be photoreal.\n` : ''}
+
+Design the three variations to be MEANINGFULLY different:
+- VARIATION A: Layout-forward. Optimize spatial composition, traffic flow, sight lines, zone definition. Furniture & feature placement is the hero.
+- VARIATION B: Softscape-forward. Plant palette is the hero. Specific species, layering, color and texture variety. Hardscape is sympathetic but quieter.
+- VARIATION C: Hardscape-forward. Materials and architectural features are the hero. Distinctive walls, paving patterns, water/fire features. Plantings frame the hardscape.
+
+All three must respect the chosen style "${style}" — they're three valid takes on that style, not three styles.
+
+Output FORMAT (strict — I will parse this):
+
+<variation_a>
+[Full Nano Banana Pro prompt for Variation A. Same constraints as a regular design prompt: photoreal, preserve the actual house/terrain, no people/vehicles/animals, ~1200-1500 chars.]
+</variation_a>
+
+<variation_b>
+[Full prompt for Variation B.]
+</variation_b>
+
+<variation_c>
+[Full prompt for Variation C.]
+</variation_c>
+
+Output ONLY the three tagged sections — no commentary, no preamble.`
+
+  const text = await callClaude({
+    model: ANTHROPIC_MODEL,
+    max_tokens: 4096,
+    system: CLAUDE_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userMessage }],
+  })
+
+  // Parse the three variations
+  const variations = []
+  const labels = ['Layout-forward', 'Softscape-forward', 'Hardscape-forward']
+  for (const tag of ['variation_a', 'variation_b', 'variation_c']) {
+    const m = text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'i'))
+    if (!m) {
+      throw new Error(`Claude didn't return a valid ${tag} block — try again`)
+    }
+    variations.push(m[1].trim())
+  }
+
+  return { variations, labels }
 }
 
 /**

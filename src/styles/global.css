@@ -197,6 +197,36 @@ body {
   opacity: 1;
 }
 
+.password-wrap {
+  position: relative;
+}
+.password-wrap input {
+  width: 100%;
+  padding-right: 48px; /* room for the eye toggle */
+}
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--sage);
+  opacity: 0.65;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  min-width: 36px;
+  min-height: 36px;
+}
+.password-toggle:active {
+  opacity: 1;
+  background: var(--green);
+}
+
 /* ---- Step Nav ---- */
 
 .step-nav {
@@ -1234,6 +1264,228 @@ body {
   opacity: 0.9;
 }
 
+/* Non-image file card (Polycam exports, PDFs, etc). */
+.file-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  background: var(--green);
+  color: var(--cream);
+  text-decoration: none;
+  font: inherit;
+  text-align: center;
+}
+.file-tile-ext {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.file-tile-name {
+  font-size: 11px;
+  opacity: 0.7;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Lightbox / Generation Viewer ---- */
+
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 10, 0.95);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  animation: lightbox-fade 0.2s ease-out;
+  /* Prevent overscroll bouncing under the lightbox on iPad */
+  overscroll-behavior: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+@keyframes lightbox-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lightbox-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(12px + var(--safe-top)) 16px 12px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+  flex-wrap: wrap;
+}
+
+.lightbox-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--cream);
+  font-size: 13px;
+  opacity: 0.85;
+}
+.lightbox-counter,
+.lightbox-time {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lightbox-time { opacity: 0.65; }
+
+.lightbox-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.lightbox-btn {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--cream);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  min-height: 38px;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-btn:active {
+  background: rgba(255,255,255,0.16);
+}
+.lightbox-btn:disabled { opacity: 0.5; cursor: default; }
+.lightbox-btn-text { font-size: 14px; }
+.lightbox-btn-primary {
+  background: var(--gold);
+  color: #1a1a1a;
+  border-color: transparent;
+  font-weight: 600;
+}
+.lightbox-btn:first-child { /* close × */
+  font-size: 26px;
+  padding: 0 14px;
+  line-height: 1;
+}
+
+.lightbox-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  /* Let iOS handle the pinch-zoom on the image */
+  touch-action: pinch-zoom pan-x pan-y;
+}
+.lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--cream);
+  font-size: 40px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+}
+.lightbox-nav:active { background: rgba(0,0,0,0.7); }
+.lightbox-nav-prev { left: 12px; }
+.lightbox-nav-next { right: 12px; }
+
+/* ---- Pencil markup ---- */
+
+.markup-stage {
+  padding: 8px 16px;
+}
+.markup-canvas-wrap {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: inline-block;
+}
+.markup-img,
+.markup-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100dvh - 220px);
+  width: auto;
+  height: auto;
+}
+.markup-img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.markup-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  /* touch-action set inline to none — prevents palm scroll */
+}
+
+.markup-footer {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+}
+.markup-footer .login-field input {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--cream);
+}
+
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.color-swatch:active {
+  transform: scale(0.9);
+}
+.color-swatch-active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,0.3);
+}
+
 /* ---- Generation gallery ---- */
 .gen-grid {
   display: grid;
@@ -1245,7 +1497,17 @@ body {
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid var(--green-mid);
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  transition: border-color 0.15s, transform 0.1s;
 }
+.gen-card:hover { border-color: var(--sage-dim); }
+.gen-card:active { transform: scale(0.98); }
 .gen-card img {
   width: 100%;
   display: block;
@@ -1375,4 +1637,33 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* ---- 3-option pick grid ---- */
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.option-card {
+  background: var(--green);
+  border: 1px solid var(--green-mid);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+.option-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  font-weight: 600;
+}
+.option-img {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  display: block;
 }

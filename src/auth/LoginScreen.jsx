@@ -18,6 +18,7 @@ export default function LoginScreen() {
   const [mode, setMode] = useState('signin')   // 'signin' | 'signup'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [signupCode, setSignupCode] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -82,15 +83,41 @@ export default function LoginScreen() {
 
           <label className="login-field">
             <span>Password</span>
-            <input
-              type="password"
-              autoComplete={isSignup ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              minLength={isSignup ? 8 : undefined}
-              placeholder={isSignup ? 'At least 8 characters' : undefined}
-            />
+            <div className="password-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={isSignup ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                minLength={isSignup ? 8 : undefined}
+                placeholder={isSignup ? 'At least 8 characters' : undefined}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  // eye-off
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a19.62 19.62 0 0 1 5.06-5.94" />
+                    <path d="M22.54 11.88A19.62 19.62 0 0 0 19 7.94" />
+                    <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  // eye
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </label>
 
           {isSignup && (

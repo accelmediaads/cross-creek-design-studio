@@ -12,7 +12,7 @@ import { supabase } from './supabase.js'
 export async function listProjects(opts = {}) {
   let q = supabase
     .from('projects')
-    .select('id, name, client_name, client_address, status, notes, prefs, design_brief, created_at, updated_at, owner_id')
+    .select('id, name, client_name, client_address, status, notes, prefs, design_brief, selected_generation_id, created_at, updated_at, owner_id')
     .order('updated_at', { ascending: false })
 
   if (opts.status) q = q.eq('status', opts.status)

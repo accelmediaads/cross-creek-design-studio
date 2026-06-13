@@ -22,6 +22,11 @@ import {
 import { listProjectGenerations } from '../api/generations.js'
 import Preferences from './Preferences.jsx'
 import ProjectGenerator from './ProjectGenerator.jsx'
+import GenerationViewer from './GenerationViewer.jsx'
+import PencilMarkup from './PencilMarkup.jsx'
+import { generatePencilRevisionPrompt } from '../api/claude.js'
+import { reviseDesignImage } from '../api/gemini.js'
+import { saveGeneration } from '../api/generations.js'
 
 export default function ProjectDetail({ project: initialProject, onBack }) {
   const [project, setProject] = useState(initialProject)
@@ -32,6 +37,9 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showGenerate, setShowGenerate] = useState(false)
+  const [viewerIndex, setViewerIndex] = useState(null) // null = closed; otherwise index into generations
+  const [markupGen, setMarkupGen] = useState(null)      // generation being marked up with Pencil
+  const [markupBusy, setMarkupBusy] = useState(false)
 
   const projectId = project.id
 
@@ -109,6 +117,38 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
       }
     } catch (err) {
       setError(err.message || 'Delete failed')
+    }
+  }
+
+  // ---- Pencil markup → AI revision ----------------------------------------
+
+  async function handleMarkupSubmit({ compositeDataUri, captionText, original }) {
+    if (markupBusy) return
+    setMarkupBusy(true)
+    setError(null)
+    try {
+      const prompt = await generatePencilRevisionPrompt(captionText)
+      const result = await reviseDesignImage(prompt, compositeDataUri)
+      await saveGeneration({
+        projectId: projectId,
+        sourcePhotoId: original.source_photo_id || null,
+        parentGenerationId: original.id,
+        kind: 'revision',
+        prompt: `[pencil markup] ${captionText}\n\n${prompt}`,
+        prefsSnapshot: project.prefs || {},
+        imageBase64: result.imageBase64,
+        mimeType: result.mimeType,
+      })
+      setMarkupGen(null)
+      setViewerIndex(null)
+      // Refresh the project so the new revision appears in the gallery.
+      refresh()
+    } catch (err) {
+      setError(err.message || 'Markup revision failed')
+      // Leave the markup view open so Randy can fix his caption and retry
+      throw err
+    } finally {
+      setMarkupBusy(false)
     }
   }
 
@@ -217,17 +257,25 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         />
       </section>
 
-      {/* ---- 4. Topo Map ---- */}
+      {/* ---- 4. Topo Map / Site Measurements ----
+        Accepts any topo-related file: images of paper surveys, PDFs from a
+        surveyor, AND 3D scan exports from Polycam etc (USDZ, OBJ, PLY, GLB).
+        The 3D files aren't fed to the generation model — they just live
+        with the project for reference / handoff to office. */}
       <section className="detail-section">
-        <SectionHeader title="Topo Map" subtitle="Optional — improves AI design accuracy" />
+        <SectionHeader
+          title="Topo / Site Scan"
+          subtitle="Optional — paper surveys, topo PDFs, or 3D scans from Polycam / similar iPad LiDAR apps. Improves project handoff accuracy."
+        />
         <PhotoGrid
           photos={topoPhotos}
           onAdd={files => handlePhotoUpload(files, 'topo_map')}
           onDelete={handlePhotoDelete}
           uploading={uploading > 0}
-          emptyText="No topo map. Drop a survey or topo PDF/image if the client has one."
-          accept="image/*"
-          multiple={false}
+          emptyText="No topo or scan yet. Drop a survey PDF, image, or a Polycam export."
+          accept="image/*,application/pdf,.pdf,.usdz,.obj,.ply,.glb,.gltf,.stl,.fbx,.dae,.xyz,.las,.laz"
+          multiple
+          addLabel="Add file"
         />
       </section>
 
@@ -284,8 +332,14 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
         )}
         {generations.length > 0 && (
           <div className="gen-grid">
-            {generations.map(g => (
-              <div key={g.id} className="gen-card">
+            {generations.map((g, i) => (
+              <button
+                key={g.id}
+                type="button"
+                className="gen-card"
+                onClick={() => setViewerIndex(i)}
+                aria-label={`Open generation from ${new Date(g.created_at).toLocaleString()}`}
+              >
                 {g.signedUrl ? (
                   <img src={g.signedUrl} alt="Generated design" />
                 ) : (
@@ -295,11 +349,29 @@ export default function ProjectDetail({ project: initialProject, onBack }) {
                   <span className={`gen-kind kind-${g.kind}`}>{g.kind}</span>
                   <span className="gen-time">{new Date(g.created_at).toLocaleString()}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
       </section>
+
+      {viewerIndex !== null && !markupGen && (
+        <GenerationViewer
+          generations={generations}
+          index={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+          onChangeIndex={setViewerIndex}
+          onMarkup={gen => setMarkupGen(gen)}
+        />
+      )}
+
+      {markupGen && (
+        <PencilMarkup
+          generation={markupGen}
+          onCancel={() => setMarkupGen(null)}
+          onSubmit={handleMarkupSubmit}
+        />
+      )}
 
       {error && (
         <div className="alert alert-error sticky-error">
@@ -373,29 +445,36 @@ function SectionHeader({ title, subtitle }) {
   )
 }
 
-function PhotoGrid({ photos, onAdd, onDelete, uploading, emptyText, accept, capture, multiple }) {
+function PhotoGrid({ photos, onAdd, onDelete, uploading, emptyText, accept, capture, multiple, addLabel }) {
   const inputRef = useRef(null)
 
   return (
     <div>
       <div className="photo-grid">
-        {photos.map(p => (
-          <div key={p.id} className="photo-tile">
-            {p.signedUrl ? (
-              <img src={p.signedUrl} alt={p.caption || ''} />
-            ) : (
-              <div className="photo-tile-fallback">Loading…</div>
-            )}
-            <button
-              type="button"
-              className="photo-delete-btn"
-              onClick={() => onDelete(p)}
-              aria-label="Delete photo"
-            >
-              ×
-            </button>
-          </div>
-        ))}
+        {photos.map(p => {
+          const isImage = isImagePath(p.storage_path)
+          return (
+            <div key={p.id} className="photo-tile">
+              {isImage ? (
+                p.signedUrl ? (
+                  <img src={p.signedUrl} alt={p.caption || ''} />
+                ) : (
+                  <div className="photo-tile-fallback">Loading…</div>
+                )
+              ) : (
+                <FileTile path={p.storage_path} signedUrl={p.signedUrl} />
+              )}
+              <button
+                type="button"
+                className="photo-delete-btn"
+                onClick={() => onDelete(p)}
+                aria-label="Delete file"
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
         <button
           type="button"
           className="photo-add-tile"
@@ -404,7 +483,7 @@ function PhotoGrid({ photos, onAdd, onDelete, uploading, emptyText, accept, capt
         >
           <span className="photo-add-plus">+</span>
           <span className="photo-add-label">
-            {uploading ? 'Uploading…' : multiple ? 'Add photos' : 'Add photo'}
+            {uploading ? 'Uploading…' : (addLabel || (multiple ? 'Add photos' : 'Add photo'))}
           </span>
         </button>
       </div>
@@ -425,6 +504,38 @@ function PhotoGrid({ photos, onAdd, onDelete, uploading, emptyText, accept, capt
       />
     </div>
   )
+}
+
+/* Non-image file card: shows extension badge + filename so Randy can tell a
+   Polycam USDZ from a PDF survey from a 3D OBJ. Clicking opens the file in
+   a new tab via the signed URL — most browsers handle PDFs inline and offer
+   to download anything else. */
+function FileTile({ path, signedUrl }) {
+  const ext = (path?.split('.').pop() || '').toUpperCase()
+  const filename = path?.split('/').pop() || 'file'
+  return (
+    <a
+      className="file-tile"
+      href={signedUrl || undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={filename}
+      onClick={e => { if (!signedUrl) e.preventDefault() }}
+    >
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+      <span className="file-tile-ext">.{ext}</span>
+      <span className="file-tile-name">{filename}</span>
+    </a>
+  )
+}
+
+function isImagePath(path) {
+  if (!path) return true // optimistic — fallback to image render
+  const ext = path.split('.').pop().toLowerCase()
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'bmp', 'avif'].includes(ext)
 }
 
 // ----------------------------------------------------------------------------
