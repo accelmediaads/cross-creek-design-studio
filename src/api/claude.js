@@ -7,7 +7,11 @@
 import { CLAUDE_SYSTEM_PROMPT } from '../prompts/systemPrompt.js'
 import { getAccessToken } from './supabase.js'
 
-const ANTHROPIC_MODEL = 'claude-sonnet-4-20250514'
+// claude-sonnet-4-20250514 was deprecated and returned 404 'not_found_error'
+// on June 16, 2026. claude-sonnet-4-6 is the current Sonnet ID — same model
+// family, gets the latest non-dated snapshot. Aliases like this don't go
+// stale the same way dated snapshots do, so we should ride it.
+const ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 
 /**
  * Build a small bullet roster describing each image attached to the prompt,
