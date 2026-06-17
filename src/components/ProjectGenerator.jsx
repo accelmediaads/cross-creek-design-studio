@@ -601,6 +601,13 @@ export default function ProjectGenerator({
                     rows={3}
                     value={revisionText}
                     onChange={e => setRevisionText(e.target.value)}
+                    /* autoFocus so the iPad keyboard pops as soon as the
+                       panel opens — no second tap needed. inputMode + enterKeyHint
+                       give iOS Safari explicit virtual-keyboard hints that
+                       fix a quirk where some inline panels swallow focus. */
+                    autoFocus
+                    inputMode="text"
+                    enterKeyHint="send"
                   />
                   <div className="revision-actions">
                     <button

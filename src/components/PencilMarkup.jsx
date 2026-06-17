@@ -225,6 +225,16 @@ export default function PencilMarkup({ generation, onCancel, onSubmit }) {
             onChange={e => setCaption(e.target.value)}
             placeholder="e.g. 'Stone walls 2 ft taller, swap turf in front of patio for gravel'"
             disabled={busy}
+            /* iOS Safari sometimes refuses to bring up the keyboard for
+               inputs inside fixed-position modals — especially when an
+               adjacent canvas captures pointer events. These attributes
+               give iOS explicit hints (virtual keyboard kind + Enter key
+               label), and the onClick handler issues an explicit focus()
+               on user gesture as a belt-and-suspenders against the quirk. */
+            inputMode="text"
+            enterKeyHint="send"
+            autoComplete="off"
+            onClick={e => e.currentTarget.focus()}
           />
         </label>
         <button
